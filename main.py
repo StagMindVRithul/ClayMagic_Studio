@@ -437,6 +437,10 @@ No other explanation, no commentary, no markdown code fences.
 # STREAMLIT CONFIG & PREMIUM UI
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# STREAMLIT CONFIG & PREMIUM UI
+# ═══════════════════════════════════════════════════════════════════════════════
+
 st.set_page_config(
     page_title="ClayMagic — AI Poster Generator",
     page_icon="🏺",
@@ -793,7 +797,7 @@ st.markdown("""
     transition: all 0.3s ease !important;
     letter-spacing: 0.5px !important;
     display: block !important;
-    margin: 0 auto !important;
+    margin: 0.8rem auto 0 !important;
     cursor: pointer !important;
 }
 .stButton > button:hover {
@@ -1084,6 +1088,7 @@ with left_col:
         type=["png", "jpg", "jpeg", "webp"],
         label_visibility="collapsed",
     )
+
     if uploaded_file:
         img_preview = Image.open(uploaded_file)
 
@@ -1096,13 +1101,17 @@ with left_col:
         </div>
         """, unsafe_allow_html=True)
 
+        btn_left, btn_center, btn_right = st.columns([1, 2, 1])
+        with btn_center:
+            generate_clicked = st.button("Generate Poster", use_container_width=True)
     else:
         st.markdown("""
         <div class="drop-zone">
             <span class="drop-icon">📸</span>
-            <div class="drop-label">Your Input Image is displayed here</div>
+            <div class="drop-label">Your Input Image is displayer here</div>
         </div>
         """, unsafe_allow_html=True)
+        generate_clicked = False
 
 with right_col:
     st.markdown("""
@@ -1137,154 +1146,151 @@ st.markdown("")
 # GENERATION PIPELINE WITH ANIMATED PROGRESS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-if uploaded_file:
-    generate_clicked = st.button("Generate Poster")
+if uploaded_file and generate_clicked:
+    st.session_state.result_image = None
 
-    if generate_clicked:
-        st.session_state.result_image = None
+    progress_placeholder = st.empty()
 
-        progress_placeholder = st.empty()
+    phase1_messages = [
+        "Studying your image closely…",
+        "Mapping shapes, colors, and anatomy…",
+        "Measuring proportions and features…",
+        "Understanding every detail…",
+    ]
+    phase2_messages = [
+        "Writing step-by-step crafting instructions…",
+        "Building the shape-then-place sequence…",
+        "Checking visual continuity across steps…",
+    ]
+    phase3_messages = [
+        "Mixing play-dough colors…",
+        "Rendering step panels one by one…",
+        "Shaping the poster layout…",
+        "Adding clay texture and lighting…",
+        "Polishing the final details…",
+        "Almost there — finishing touches…",
+    ]
 
-        phase1_messages = [
-            "Studying your image closely…",
-            "Mapping shapes, colors, and anatomy…",
-            "Measuring proportions and features…",
-            "Understanding every detail…",
-        ]
-        phase2_messages = [
-            "Writing step-by-step crafting instructions…",
-            "Building the shape-then-place sequence…",
-            "Checking visual continuity across steps…",
-        ]
-        phase3_messages = [
-            "Mixing play-dough colors…",
-            "Rendering step panels one by one…",
-            "Shaping the poster layout…",
-            "Adding clay texture and lighting…",
-            "Polishing the final details…",
-            "Almost there — finishing touches…",
-        ]
+    # ── Phase 1: Analyze image + generate prompt ──
+    prompt_result = {"value": None, "error": None}
 
-        # ── Phase 1: Analyze image + generate prompt ──
-        prompt_result = {"value": None, "error": None}
+    def run_prompt_generation():
+        try:
+            uploaded_file.seek(0)
+            image_data_uri = encode_uploaded_image(uploaded_file)
+            prompt_result["value"] = generate_prompt(image_data_uri)
+        except Exception as e:
+            prompt_result["error"] = str(e)
 
-        def run_prompt_generation():
-            try:
-                uploaded_file.seek(0)
-                image_data_uri = encode_uploaded_image(uploaded_file)
-                prompt_result["value"] = generate_prompt(image_data_uri)
-            except Exception as e:
-                prompt_result["error"] = str(e)
+    thread = threading.Thread(target=run_prompt_generation)
+    thread.start()
 
-        thread = threading.Thread(target=run_prompt_generation)
-        thread.start()
+    pct = 0
+    msg_idx = 0
+    all_phase1_msgs = phase1_messages + phase2_messages
+    while thread.is_alive():
+        if pct < 15:
+            pct += 2
+        elif pct < 30:
+            pct += 1
+        elif pct < 42:
+            pct += 0.5
+        elif pct < 48:
+            pct += 0.2
 
-        pct = 0
-        msg_idx = 0
-        all_phase1_msgs = phase1_messages + phase2_messages
-        while thread.is_alive():
-            if pct < 15:
-                pct += 2
-            elif pct < 30:
-                pct += 1
-            elif pct < 42:
-                pct += 0.5
-            elif pct < 48:
-                pct += 0.2
+        pct_int = min(int(pct), 48)
+        current_msg = all_phase1_msgs[min(msg_idx, len(all_phase1_msgs) - 1)]
+        progress_placeholder.markdown(render_progress(pct_int, current_msg), unsafe_allow_html=True)
 
-            pct_int = min(int(pct), 48)
-            current_msg = all_phase1_msgs[min(msg_idx, len(all_phase1_msgs) - 1)]
-            progress_placeholder.markdown(render_progress(pct_int, current_msg), unsafe_allow_html=True)
+        if pct_int % 8 == 0 and pct_int > 0:
+            msg_idx = min(msg_idx + 1, len(all_phase1_msgs) - 1)
 
-            if pct_int % 8 == 0 and pct_int > 0:
-                msg_idx = min(msg_idx + 1, len(all_phase1_msgs) - 1)
+        time.sleep(0.4)
 
-            time.sleep(0.4)
+    thread.join()
 
-        thread.join()
-
-        if prompt_result["error"]:
-            progress_placeholder.markdown(
-                render_progress(0, f"Prompt generation failed: {prompt_result['error']}"),
-                unsafe_allow_html=True,
-            )
-            st.stop()
-
-        raw_output = prompt_result["value"]
-
-        # ── Extract poster prompt and image size from raw o3 output ──
-        poster_prompt, image_size = extract_prompt_and_size(raw_output)
-
-        # Log diagnostics to console
-        counting_lines = [line for line in raw_output.split("\n") if line.strip().startswith("+1")]
-        total_match = re.search(r"Total:\s*(\d+)", raw_output)
-        counted_steps = int(total_match.group(1)) if total_match else len(counting_lines)
-        panel_count = len(re.findall(r"=== PANEL \d+", poster_prompt))
-        print(f"[ClayMagic] Counted steps: {counted_steps} | Detected panels: {panel_count} | Size: {image_size}")
-        if panel_count != counted_steps:
-            print(f"  WARNING: Panel count ({panel_count}) doesn't match counted steps ({counted_steps})!")
-
+    if prompt_result["error"]:
         progress_placeholder.markdown(
-            render_progress(50, "Crafting instructions ready — now generating poster…"),
+            render_progress(0, f"Prompt generation failed: {prompt_result['error']}"),
             unsafe_allow_html=True,
         )
-        time.sleep(0.8)
+        st.stop()
 
-        # ── Phase 2: Generate image ──
-        image_result = {"value": None, "error": None}
+    raw_output = prompt_result["value"]
 
-        def run_image_generation():
-            try:
-                image_result["value"] = generate_image(poster_prompt, image_size)
-            except Exception as e:
-                image_result["error"] = str(e)
+    # ── Extract poster prompt and image size from raw o3 output ──
+    poster_prompt, image_size = extract_prompt_and_size(raw_output)
 
-        thread2 = threading.Thread(target=run_image_generation)
-        thread2.start()
+    # Log diagnostics to console
+    counting_lines = [line for line in raw_output.split("\n") if line.strip().startswith("+1")]
+    total_match = re.search(r"Total:\s*(\d+)", raw_output)
+    counted_steps = int(total_match.group(1)) if total_match else len(counting_lines)
+    panel_count = len(re.findall(r"=== PANEL \d+", poster_prompt))
+    print(f"[ClayMagic] Counted steps: {counted_steps} | Detected panels: {panel_count} | Size: {image_size}")
+    if panel_count != counted_steps:
+        print(f"  WARNING: Panel count ({panel_count}) doesn't match counted steps ({counted_steps})!")
 
-        pct = 52
-        msg_idx = 0
-        while thread2.is_alive():
-            if pct < 65:
-                pct += 1.5
-            elif pct < 78:
-                pct += 0.8
-            elif pct < 88:
-                pct += 0.4
-            elif pct < 95:
-                pct += 0.15
-            elif pct < 98:
-                pct += 0.05
-            else:
-                pct = min(pct + 0.01, 99)
+    progress_placeholder.markdown(
+        render_progress(50, "Crafting instructions ready — now generating poster…"),
+        unsafe_allow_html=True,
+    )
+    time.sleep(0.8)
 
-            pct_int = min(int(pct), 99)
-            current_msg = phase3_messages[min(msg_idx, len(phase3_messages) - 1)]
-            progress_placeholder.markdown(render_progress(pct_int, current_msg), unsafe_allow_html=True)
+    # ── Phase 2: Generate image ──
+    image_result = {"value": None, "error": None}
 
-            if int(pct) % 10 == 0 and int(pct) > 52:
-                msg_idx = min(msg_idx + 1, len(phase3_messages) - 1)
+    def run_image_generation():
+        try:
+            image_result["value"] = generate_image(poster_prompt, image_size)
+        except Exception as e:
+            image_result["error"] = str(e)
 
-            time.sleep(0.5)
+    thread2 = threading.Thread(target=run_image_generation)
+    thread2.start()
 
-        thread2.join()
+    pct = 52
+    msg_idx = 0
+    while thread2.is_alive():
+        if pct < 65:
+            pct += 1.5
+        elif pct < 78:
+            pct += 0.8
+        elif pct < 88:
+            pct += 0.4
+        elif pct < 95:
+            pct += 0.15
+        elif pct < 98:
+            pct += 0.05
+        else:
+            pct = min(pct + 0.01, 99)
 
-        if image_result["error"]:
-            progress_placeholder.markdown(
-                render_progress(min(int(pct), 99), f"Image generation failed: {image_result['error']}"),
-                unsafe_allow_html=True,
-            )
-            st.stop()
+        pct_int = min(int(pct), 99)
+        current_msg = phase3_messages[min(msg_idx, len(phase3_messages) - 1)]
+        progress_placeholder.markdown(render_progress(pct_int, current_msg), unsafe_allow_html=True)
 
-        st.session_state.result_image = image_result["value"]
+        if int(pct) % 10 == 0 and int(pct) > 52:
+            msg_idx = min(msg_idx + 1, len(phase3_messages) - 1)
 
+        time.sleep(0.5)
+
+    thread2.join()
+
+    if image_result["error"]:
         progress_placeholder.markdown(
-            render_progress(100, "Your poster is ready!", done=True),
+            render_progress(min(int(pct), 99), f"Image generation failed: {image_result['error']}"),
             unsafe_allow_html=True,
         )
-        time.sleep(1.2)
+        st.stop()
 
-        st.rerun()
+    st.session_state.result_image = image_result["value"]
+
+    progress_placeholder.markdown(
+        render_progress(100, "Your poster is ready!", done=True),
+        unsafe_allow_html=True,
+    )
+    time.sleep(1.2)
+
+    st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
