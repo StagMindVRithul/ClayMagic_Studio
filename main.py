@@ -437,10 +437,6 @@ No other explanation, no commentary, no markdown code fences.
 # STREAMLIT CONFIG & PREMIUM UI
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# STREAMLIT CONFIG & PREMIUM UI
-# ═══════════════════════════════════════════════════════════════════════════════
-
 st.set_page_config(
     page_title="ClayMagic — AI Poster Generator",
     page_icon="🏺",
@@ -755,17 +751,9 @@ st.markdown("""
     box-shadow: 0 8px 32px rgba(0,0,0,0.40);
 }
 
-/* ═══════════════════════════════════════
-   RESULT FRAME — GRADIENT BORDER
-   ═══════════════════════════════════════ */
-.result-frame {
-    background: var(--bg-card-solid);
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    position: relative;
-    max-width: 680px;
-    margin: 0 auto;
-    /* Gradient border trick */
+/* Style the generated poster image directly */
+[data-testid="stImage"] img {
+    border-radius: var(--radius-md);
     border: 3px solid transparent;
     background-image:
         linear-gradient(var(--bg-card-solid), var(--bg-card-solid)),
@@ -775,10 +763,6 @@ st.markdown("""
     box-shadow:
         0 12px 48px rgba(0,0,0,0.50),
         0 0 60px rgba(255,190,69,0.08);
-}
-.result-frame img {
-    border-radius: var(--radius-md);
-    width: 100%;
 }
 
 /* ═══════════════════════════════════════
@@ -1103,7 +1087,7 @@ with left_col:
 
         btn_left, btn_center, btn_right = st.columns([1, 2, 1])
         with btn_center:
-            generate_clicked = st.button("Generate Poster", use_container_width=True)
+            generate_clicked = st.button("Generate Poster", width="stretch")
     else:
         st.markdown("""
         <div class="drop-zone">
@@ -1121,17 +1105,18 @@ with right_col:
     """, unsafe_allow_html=True)
 
     if "result_image" in st.session_state and st.session_state.result_image is not None:
-        st.markdown('<div class="result-frame">', unsafe_allow_html=True)
         st.image(st.session_state.result_image, width="stretch")
-        st.markdown('</div>', unsafe_allow_html=True)
         buf = BytesIO()
         st.session_state.result_image.save(buf, format="PNG")
-        st.download_button(
-            label="Download Poster",
-            data=buf.getvalue(),
-            file_name="playdough_poster.png",
-            mime="image/png",
-        )
+        dl_left, dl_center, dl_right = st.columns([1, 2, 1])
+        with dl_center:
+            st.download_button(
+                label="Download Poster",
+                data=buf.getvalue(),
+                file_name="playdough_poster.png",
+                mime="image/png",
+                width="stretch",
+            )
     else:
         st.markdown("""
         <div class="poster-placeholder">
