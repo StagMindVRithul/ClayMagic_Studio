@@ -1108,7 +1108,7 @@ with left_col:
         st.markdown("""
         <div class="drop-zone">
             <span class="drop-icon">📸</span>
-            <div class="drop-label">Your Input Image is displayer here</div>
+            <div class="drop-label">Your Input Image is displayed here</div>
         </div>
         """, unsafe_allow_html=True)
         generate_clicked = False
