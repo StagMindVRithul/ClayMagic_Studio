@@ -1007,8 +1007,8 @@ def generate_image(prompt_text: str, image_size: str = "1536x1024") -> Image.Ima
     result = client.images.generate(
         model="gpt-image-2",
         prompt=prompt_text,
-        quality = "high",
-        size="1536x1024",
+        quality = "medium",
+        size = "3824x2144",
     )
     image_bytes = base64.b64decode(result.data[0].b64_json)
     return Image.open(BytesIO(image_bytes))
