@@ -1022,7 +1022,7 @@ st.markdown("""
 <div class="hero-header">
     <div class="hero-badge">AI-Powered Clay Crafting</div>
     <h1 class="hero-title">ClayMagic Studio</h1>
-    <p class="hero-sub">Upload any image — our AI deconstructs it into a <strong>step-by-step Model-Magic Poster</strong> for kids</p>
+    <p class="hero-sub">Upload any image — our AI deconstructs it into a <strong>step-by-step Model Magic Poster</strong> for kids</p>
 </div>
 """, unsafe_allow_html=True)
 
